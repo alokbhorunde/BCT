@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
-import { Search, Flame, Shuffle, BookOpen, RefreshCw, Sparkles, BookOpenCheck } from 'lucide-react';
+import { Search, Flame, Shuffle, BookOpen, RefreshCw, Sparkles, BookOpenCheck, Layers, Cpu, Shield, Coins } from 'lucide-react';
 import { studyData } from './data/studyData';
 import StatsHeader from './components/StatsHeader';
 import TopicCard from './components/TopicCard';
@@ -24,6 +24,7 @@ export default function App() {
   const [completedTopics, setCompletedTopics] = useState({});
   const [activeTopic, setActiveTopic] = useState(null);
   const [activeUnit, setActiveUnit] = useState(null);
+  const [activeTab, setActiveTab] = useState('all');
 
   // --- LOCAL STORAGE SYNC ---
   useEffect(() => {
@@ -99,13 +100,14 @@ export default function App() {
     return { total, high, completed };
   }, [completedTopics]);
 
-  // --- FILTERED DATA PIPELINE ---
-  const filteredUnits = useMemo(() => {
+  // --- TAB COUNTS (FILTERED BY SEARCH & DROPDOWNS BUT NOT ACTIVE TAB) ---
+  const tabCounts = useMemo(() => {
     const query = searchQuery.toLowerCase().trim();
+    const counts = { all: 0, u3: 0, u4: 0, u5: 0 };
 
-    return studyData.units.map(unit => {
+    studyData.units.forEach(unit => {
       const matchingTopics = unit.topics.filter(topic => {
-        // 1. Search Query filter (matches name, idk question, answers or bullet points)
+        // 1. Search Query filter
         if (query) {
           const matchName = topic.name.toLowerCase().includes(query);
           const matchIdk = topic.idk.toLowerCase().includes(query);
@@ -131,17 +133,59 @@ export default function App() {
         return true;
       });
 
-      return {
-        ...unit,
-        topics: matchingTopics
-      };
-    }).filter(unit => unit.topics.length > 0); // Only keep units with matching topics
+      counts[unit.id] = matchingTopics.length;
+      counts.all += matchingTopics.length;
+    });
+
+    return counts;
   }, [searchQuery, markFilter, examFilter]);
+
+  // --- FILTERED DATA PIPELINE ---
+  const filteredUnits = useMemo(() => {
+    const query = searchQuery.toLowerCase().trim();
+
+    return studyData.units
+      .filter(unit => activeTab === 'all' || unit.id === activeTab)
+      .map(unit => {
+        const matchingTopics = unit.topics.filter(topic => {
+          // 1. Search Query filter (matches name, idk question, answers or bullet points)
+          if (query) {
+            const matchName = topic.name.toLowerCase().includes(query);
+            const matchIdk = topic.idk.toLowerCase().includes(query);
+            const matchAnswer = topic.answer.toLowerCase().includes(query);
+            const matchPoints = topic.points.some(p => p.toLowerCase().includes(query));
+            if (!matchName && !matchIdk && !matchAnswer && !matchPoints) return false;
+          }
+
+          // 2. Marks Weightage filter
+          if (markFilter !== 'all') {
+            const maxMark = getMaxMark(topic.marks);
+            if (markFilter === 'high' && maxMark < 7) return false;
+            if (markFilter === 'medium' && (maxMark < 5 || maxMark > 6)) return false;
+            if (markFilter === 'low' && maxMark > 4) return false;
+          }
+
+          // 3. Exam Session filter
+          if (examFilter !== 'all') {
+            const matchesExam = topic.exams.split(',').map(e => e.trim()).includes(examFilter);
+            if (!matchesExam) return false;
+          }
+
+          return true;
+        });
+
+        return {
+          ...unit,
+          topics: matchingTopics
+        };
+      }).filter(unit => unit.topics.length > 0); // Only keep units with matching topics
+  }, [searchQuery, markFilter, examFilter, activeTab]);
 
   const handleResetFilters = useCallback(() => {
     setSearchQuery('');
     setMarkFilter('all');
     setExamFilter('all');
+    setActiveTab('all');
   }, []);
 
   return (
@@ -203,6 +247,51 @@ export default function App() {
         completedCount={allStats.completed} 
         highWeightageCount={allStats.high} 
       />
+
+      {/* UNIT TAB SELECTOR */}
+      <div className="tabs-container">
+        <div className="tabs-row">
+          <button 
+            className={`tab-btn ${activeTab === 'all' ? 'active' : ''}`}
+            data-tab="all"
+            onClick={() => setActiveTab('all')}
+          >
+            <Layers size={16} />
+            <span>All Units</span>
+            <span className="tab-badge">{tabCounts.all}</span>
+          </button>
+          
+          <button 
+            className={`tab-btn ${activeTab === 'u3' ? 'active' : ''}`}
+            data-tab="u3"
+            onClick={() => setActiveTab('u3')}
+          >
+            <Cpu size={16} />
+            <span>Unit 3</span>
+            <span className="tab-badge">{tabCounts.u3}</span>
+          </button>
+
+          <button 
+            className={`tab-btn ${activeTab === 'u4' ? 'active' : ''}`}
+            data-tab="u4"
+            onClick={() => setActiveTab('u4')}
+          >
+            <Shield size={16} />
+            <span>Unit 4</span>
+            <span className="tab-badge">{tabCounts.u4}</span>
+          </button>
+
+          <button 
+            className={`tab-btn ${activeTab === 'u5' ? 'active' : ''}`}
+            data-tab="u5"
+            onClick={() => setActiveTab('u5')}
+          >
+            <Coins size={16} />
+            <span>Unit 5</span>
+            <span className="tab-badge">{tabCounts.u5}</span>
+          </button>
+        </div>
+      </div>
 
       {/* CORE UNITS CONTENT */}
       <main>
