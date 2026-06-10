@@ -1,23 +1,23 @@
 import React from 'react';
 import { Circle, CheckCircle2 } from 'lucide-react';
 
-export default function TopicCard({
+const TopicCard = React.memo(function TopicCard({
   topic,
-  unitId,
-  unitColor,
+  topicKey,
+  unit,
   isCompleted,
   onToggleComplete,
   onClick
 }) {
   const handleCheckboxClick = (e) => {
     e.stopPropagation(); // Prevent opening the modal
-    onToggleComplete();
+    onToggleComplete(topicKey);
   };
 
   return (
     <div 
-      className={`topic-card-wrapper ${unitId}-card`}
-      onClick={onClick}
+      className={`topic-card-wrapper ${unit.id}-card`}
+      onClick={() => onClick(topic, unit)}
     >
       <div className="topic-card-inner">
         <div className="topic-card-front">
@@ -40,4 +40,6 @@ export default function TopicCard({
       </div>
     </div>
   );
-}
+});
+
+export default TopicCard;

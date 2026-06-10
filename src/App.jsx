@@ -37,18 +37,30 @@ export default function App() {
     }
   }, []);
 
-  const toggleTopicCompletion = (key) => {
-    const updated = {
-      ...completedTopics,
-      [key]: !completedTopics[key]
-    };
-    setCompletedTopics(updated);
-    try {
-      localStorage.setItem('bct_mastered_topics', JSON.stringify(updated));
-    } catch (e) {
-      console.error('Failed to save completed topics to localStorage', e);
-    }
-  };
+  const toggleTopicCompletion = useCallback((key) => {
+    setCompletedTopics(prev => {
+      const updated = {
+        ...prev,
+        [key]: !prev[key]
+      };
+      try {
+        localStorage.setItem('bct_mastered_topics', JSON.stringify(updated));
+      } catch (e) {
+        console.error('Failed to save completed topics to localStorage', e);
+      }
+      return updated;
+    });
+  }, []);
+
+  const handleTopicSelect = useCallback((topic, unit) => {
+    setActiveTopic(topic);
+    setActiveUnit(unit);
+  }, []);
+
+  const handleCloseModal = useCallback(() => {
+    setActiveTopic(null);
+    setActiveUnit(null);
+  }, []);
 
   // --- STATIC/COMPUTED DROPDOWNS ---
   const examOptions = useMemo(() => {
@@ -126,11 +138,11 @@ export default function App() {
     }).filter(unit => unit.topics.length > 0); // Only keep units with matching topics
   }, [searchQuery, markFilter, examFilter]);
 
-  const handleResetFilters = () => {
+  const handleResetFilters = useCallback(() => {
     setSearchQuery('');
     setMarkFilter('all');
     setExamFilter('all');
-  };
+  }, []);
 
   return (
     <div className="app-container">
@@ -213,15 +225,12 @@ export default function App() {
                   return (
                     <TopicCard 
                       key={key}
+                      topicKey={key}
                       topic={topic}
-                      unitId={unit.id}
-                      unitColor={unit.color}
+                      unit={unit}
                       isCompleted={!!completedTopics[key]}
-                      onToggleComplete={() => toggleTopicCompletion(key)}
-                      onClick={() => {
-                        setActiveTopic(topic);
-                        setActiveUnit(unit);
-                      }}
+                      onToggleComplete={toggleTopicCompletion}
+                      onClick={handleTopicSelect}
                     />
                   );
                 })}
@@ -268,10 +277,7 @@ export default function App() {
         <TopicModal 
           topic={activeTopic}
           unit={activeUnit}
-          onClose={() => {
-            setActiveTopic(null);
-            setActiveUnit(null);
-          }}
+          onClose={handleCloseModal}
           isCompleted={!!completedTopics[getTopicKey(activeUnit.id, activeTopic.name)]}
           onToggleComplete={() => toggleTopicCompletion(getTopicKey(activeUnit.id, activeTopic.name))}
         />
