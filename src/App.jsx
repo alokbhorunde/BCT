@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { Search, Flame, Shuffle, BookOpen, RefreshCw, Sparkles, BookOpenCheck } from 'lucide-react';
 import { studyData } from './data/studyData';
 import StatsHeader from './components/StatsHeader';
